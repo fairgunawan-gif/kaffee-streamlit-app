@@ -48,6 +48,8 @@ pivot_verz = df_plot_verz.pivot(
 
 st.line_chart(pivot_verz)
 
+st.markdown("date 06.02.26", text_alignment="left")
+
 # st.dataframe(df)
 
 # # Example filters
