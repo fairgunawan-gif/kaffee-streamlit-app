@@ -31,30 +31,74 @@ df_plot_verz = (
 )
 
 st.subheader("Mittelwert von Umsatzverlust pro Kalenderwoche")
-pivot = df_plot.pivot(
-    index="Kalenderwoche",
-    columns="Lieferroute",
-    values="Umsatzverlust_EUR",
-).sort_index()
+# pivot = df_plot.pivot(
+#     index="Kalenderwoche",
+#     columns="Lieferroute",
+#     values="Umsatzverlust_EUR",
+# ).sort_index()
 
-st.line_chart(pivot)
+# st.line_chart(pivot)
+
+
+chart_umsatz = (
+    alt.Chart(df_plot)
+    .mark_line()
+    .encode(
+        x=alt.X(
+            "Kalenderwoche:O",
+            title="Kalenderwoche"
+        ),
+        y=alt.Y(
+            "Umsatzverlust_EUR:Q",
+            title="Umsatzverlust (Euro)"
+        ),
+        color=alt.Color(
+            "Lieferroute:N",
+            title="Lieferroute"
+        )
+    )
+)
+
+st.altair_chart(chart_umsatz, use_container_width=True)
 
 st.subheader("Mittelwert von Verzoegerung pro Kalenderwoche")
-pivot_verz = df_plot_verz.pivot(
-    index="Kalenderwoche",
-    columns="Lieferroute",
-    values="Verzoegerung_Min",
-).sort_index()
+# pivot_verz = df_plot_verz.pivot(
+#     index="Kalenderwoche",
+#     columns="Lieferroute",
+#     values="Verzoegerung_Min",
+# ).sort_index()
 
-st.line_chart(pivot_verz)
+# st.line_chart(pivot_verz)
 
-st.markdown("date 06.02.26", text_alignment="left")
 
-# st.dataframe(df)
+chart_verz = (
+    alt.Chart(df_plot_verz)
+    .mark_line()
+    .encode(
+        x=alt.X(
+            "Kalenderwoche:O",
+            title="Kalenderwoche"
+        ),
+        y=alt.Y(
+            "Verzoegerung_Min:Q",
+            title="Verzögerung (Minuten)"
+        ),
+        color=alt.Color(
+            "Lieferroute:N",
+            title="Lieferroute"
+        )
+    )
+)
 
-# # Example filters
-# team = st.selectbox("Select a team", df["Team"].unique())
-# team_row = df[df["Team"] == team]
+st.altair_chart(chart_verz, use_container_width=True)
 
-# st.subheader("Selected Team Stats")
-# st.write(team_row)
+
+st.markdown("Last updated 07.02.26", text_alignment="left")
+
+
+
+# Whenever you change the code:
+# In VS Code:
+# git add .
+# git commit -m "Describe your change"
+# git push
