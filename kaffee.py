@@ -80,7 +80,7 @@ st.altair_chart(chart_umsatz, use_container_width=True)
 
 st.subheader("Mittelwert von Verzoegerung pro Kalenderwoche")
 base_verz = (
-    alt.Chart(df_plot)
+    alt.Chart(df_plot-verz)
     .encode(
         x=alt.X(
             "Week_Start:T",
@@ -89,7 +89,7 @@ base_verz = (
                 labelExpr="datum['KW_Label']"
             )
         ),
-        y=alt.Y("Verzoegerung_Min:Q", title="Verzögerung (Minuten)"),
+        y=alt.Y("Verzoegerung_Min:Q", title="Verzoegerung (Minuten)"),
         color=alt.Color("Lieferroute:N", title="Lieferroute")
     )
 )
