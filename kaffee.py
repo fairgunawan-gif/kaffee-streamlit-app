@@ -59,6 +59,7 @@ chart_umsatz = (
     .encode(
         x=alt.X(
             "Week_Start:T",
+            timeUnit= "yearweek"
             title="Kalenderwoche",
             axis=alt.Axis(format="%Y-KW%W")
         ),
@@ -82,6 +83,7 @@ chart_umsatz = (
     .encode(
         x=alt.X(
             "Week_Start:T",
+            timeUnit= "yearweek"
             title="Kalenderwoche",
             axis=alt.Axis(format="%Y-KW%W")
         ),
