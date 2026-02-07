@@ -5,7 +5,7 @@ import altair as alt
 st.title("Dashboard zur wöchentlichen Kontrolle")
 
 # Example: loading from Excel
-df = pd.read_excel("kaffeekette_logistik_daten1.xlsx")
+df = pd.read_excel("kaffeekette_logistik_daten.xlsx")
 
 df["Datum"] = pd.to_datetime(df["Datum"])
 
