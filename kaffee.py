@@ -9,15 +9,7 @@ df = pd.read_excel("kaffeekette_logistik_daten1.xlsx")
 
 df["Datum"] = pd.to_datetime(df["Datum"])
 
-df["Week_Start"] = df["Datum"] - pd.to_timedelta(df["Datum"].dt.weekday, unit="D")
-# What this does:
-# dt.weekday → Monday = 0, Sunday = 6
-# subtracting that many days snaps every date to Monday of its week
-# So:
-# Datum	Week_Start
-# 2025-12-29	2025-12-29
-# 2026-01-02	2025-12-29
-# Same week. No reset. No ambiguity.
+df["Week_Start"] = df["Datum"] - pd.to_timedelta(df["Datum"].dt.dayofweek, unit="D")
 
 latest_week = df["Week_Start"].max()
 cutoff = latest_week - pd.Timedelta(weeks=4)
