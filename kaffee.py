@@ -59,7 +59,7 @@ chart_umsatz = (
     .encode(
         x=alt.X(
             "Week_Start:T",
-            timeUnit= "yearweek"
+            timeUnit= "yearweek",
             title="Kalenderwoche",
             axis=alt.Axis(format="%Y-KW%W")
         ),
@@ -77,13 +77,13 @@ st.altair_chart(chart_umsatz, use_container_width=True)
 
 st.subheader("Mittelwert von Verzoegerung pro Kalenderwoche")
 
-chart_umsatz = (
+chart_verz = (
     alt.Chart(df_plot_verz)
     .mark_line()
     .encode(
         x=alt.X(
             "Week_Start:T",
-            timeUnit= "yearweek"
+            timeUnit= "yearweek",
             title="Kalenderwoche",
             axis=alt.Axis(format="%Y-KW%W")
         ),
@@ -95,7 +95,7 @@ chart_umsatz = (
     )
 )
 
-st.altair_chart(chart_umsatz, use_container_width=True)
+st.altair_chart(chart_verz, use_container_width=True)
 
 
 st.markdown("Last updated 07.02.26", text_alignment="left")
