@@ -80,7 +80,7 @@ st.altair_chart(chart_umsatz, use_container_width=True)
 
 st.subheader("Mittelwert von Verzoegerung pro Kalenderwoche")
 base_verz = (
-    alt.Chart(df_plot-verz)
+    alt.Chart(df_plot_verz)
     .encode(
         x=alt.X(
             "Week_Start:T",
