@@ -15,7 +15,7 @@ df["Week_Start"] = df["Datum"] - pd.to_timedelta(
 )
 
 # Calendar-year week number, starting at KW01
-df["KW_Num"] = df["Week_Start"].dt.strftime("%W").astype(int) + 1
+df["KW_Num"] = df["Week_Start"].dt.strftime("%W").astype(int)
 
 df["KW_Label"] = (
     df["Week_Start"].dt.year.astype(str)
