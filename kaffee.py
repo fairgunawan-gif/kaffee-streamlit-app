@@ -50,22 +50,18 @@ df_plot_verz = (
 
 st.subheader("Mittelwert von Umsatzverlust pro Kalenderwoche")
 
-chart_umsatz = (
+base_umsatz = (
     alt.Chart(df_plot)
-    .mark_line()
     .encode(
-        x=alt.X(
-            "Week_Start:T",
-            title="Kalenderwoche",
-            axis=alt.Axis(labelExpr="datum.label")
-        ),
-        y=alt.Y(
-            "Umsatzverlust_EUR:Q",
-            title="Umsatzverlust (Euro)"
-        ),
-        color=alt.Color("Lieferroute:N", title="Lieferroute"),
-        tooltip=["KW_Label"]
+        x=alt.X("Week_Start:T", title="Kalenderwoche"),
+        y=alt.Y("Umsatzverlust_EUR:Q", title="Umsatzverlust (Euro)"),
+        color=alt.Color("Lieferroute:N", title="Lieferroute")
     )
+)
+
+chart_umsatz = (
+    base_umsatz.mark_line()
+    + base_umsatz.mark_point(size=80)
 )
 
 st.altair_chart(chart_umsatz, use_container_width=True)
@@ -73,22 +69,18 @@ st.altair_chart(chart_umsatz, use_container_width=True)
 
 st.subheader("Mittelwert von Verzoegerung pro Kalenderwoche")
 
-chart_verz = (
+base_verz = (
     alt.Chart(df_plot_verz)
-    .mark_line()
     .encode(
-        x=alt.X(
-            "Week_Start:T",
-            title="Kalenderwoche",
-            axis=alt.Axis(labelExpr="datum.label")
-        ),
-        y=alt.Y(
-            "Verzoegerung_Min:Q",
-            title="Verzögerung (Minuten)"
-        ),
-        color=alt.Color("Lieferroute:N", title="Lieferroute"),
-        tooltip=["KW_Label"]
+        x=alt.X("Week_Start:T", title="Kalenderwoche"),
+        y=alt.Y("Verzoegerung_Min:Q", title="Verzögerung (Minuten)"),
+        color=alt.Color("Lieferroute:N", title="Lieferroute")
     )
+)
+
+chart_verz = (
+    base_verz.mark_line()
+    + base_verz.mark_point(size=80)
 )
 
 st.altair_chart(chart_verz, use_container_width=True)
