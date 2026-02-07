@@ -81,7 +81,7 @@ chart_verz = (
         ),
         y=alt.Y(
             "Verzoegerung_Min:Q",
-            title="Verzögerung (Minuten)"
+            title="Verzoegerung (Minuten)"
         ),
         color=alt.Color(
             "Lieferroute:N",
