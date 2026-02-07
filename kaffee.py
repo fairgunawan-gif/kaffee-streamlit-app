@@ -60,10 +60,11 @@ base_umsatz = (
     alt.Chart(df_plot)
     .encode(
         x=alt.X(
-            "Week_Start:T",
+            "KW_Label:N",
             title="Kalenderwoche",
-            axis=alt.Axis(
-                labelExpr="datum['KW_Label']"
+            sort=alt.SortField(
+                field="Week_Start",
+                order="ascending"
             )
         ),
         y=alt.Y("Umsatzverlust_EUR:Q", title="Umsatzverlust (Euro)"),
@@ -83,10 +84,11 @@ base_verz = (
     alt.Chart(df_plot_verz)
     .encode(
         x=alt.X(
-            "Week_Start:T",
+            "KW_Label:N",
             title="Kalenderwoche",
-            axis=alt.Axis(
-                labelExpr="datum['KW_Label']"
+            sort=alt.SortField(
+                field="Week_Start",
+                order="ascending"
             )
         ),
         y=alt.Y("Verzoegerung_Min:Q", title="Verzoegerung (Minuten)"),
