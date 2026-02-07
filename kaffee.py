@@ -20,9 +20,9 @@ df["Week_Start"] = df["Datum"] - pd.to_timedelta(df["Datum"].dt.weekday, unit="D
 # Same week. No reset. No ambiguity.
 
 latest_week = df["Week_Start"].max()
-cutoff = latest_week - pd.Timedelta(weeks=3)
+cutoff = latest_week - pd.Timedelta(weeks=4)
 
-df_last4 = df[df["Week_Start"] >= cutoff]
+df_last5 = df[df["Week_Start"] >= cutoff]
 # This always gives you exactly the most recent four weeks, even across years.
 # No week numbers involved. Time flows forward like it should.
 
@@ -39,13 +39,13 @@ df["Verzoegerung_Min"] = (
 routes = ["Route_A", "Route_B", "Route_C"]
 
 df_plot = (
-    df_last4[df_last4["Lieferroute"].isin(routes)]
+    df_last5[df_last5["Lieferroute"].isin(routes)]
     .groupby(["Week_Start", "Lieferroute"], as_index=False)["Umsatzverlust_EUR"]
     .mean()
 )
 
 df_plot_verz = (
-    df_last4[df_last4["Lieferroute"].isin(routes)]
+    df_last5[df_last5["Lieferroute"].isin(routes)]
     .groupby(["Week_Start", "Lieferroute"], as_index=False)["Verzoegerung_Min"]
     .mean()
 )
@@ -72,7 +72,6 @@ chart_umsatz = (
 )
 
 st.altair_chart(chart_umsatz, use_container_width=True)
-
 
 
 st.subheader("Mittelwert von Verzoegerung pro Kalenderwoche")
