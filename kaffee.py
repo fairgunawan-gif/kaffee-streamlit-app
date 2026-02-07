@@ -10,6 +10,11 @@ df = pd.read_excel("kaffeekette_logistik_daten1.xlsx")
 df["Datum"] = pd.to_datetime(df["Datum"])
 
 df["Week_Start"] = df["Datum"] - pd.to_timedelta(df["Datum"].dt.dayofweek, unit="D")
+df["KW_Label"] = (
+    df["Datum"].dt.year.astype(str)
+    + "-KW"
+    + df["Datum"].dt.strftime("%W")
+)
 
 latest_week = df["Week_Start"].max()
 cutoff = latest_week - pd.Timedelta(weeks=4)
@@ -32,13 +37,13 @@ routes = ["Route_A", "Route_B", "Route_C"]
 
 df_plot = (
     df_last5[df_last5["Lieferroute"].isin(routes)]
-    .groupby(["Week_Start", "Lieferroute"], as_index=False)["Umsatzverlust_EUR"]
+    .groupby(["Week_Start", "KW_Label", "Lieferroute"], as_index=False)["Umsatzverlust_EUR"]
     .mean()
 )
 
 df_plot_verz = (
     df_last5[df_last5["Lieferroute"].isin(routes)]
-    .groupby(["Week_Start", "Lieferroute"], as_index=False)["Verzoegerung_Min"]
+    .groupby(["Week_Start", "KW_Label", "Lieferroute"], as_index=False)["Verzoegerung_Min"]
     .mean()
 )
 
@@ -51,15 +56,15 @@ chart_umsatz = (
     .encode(
         x=alt.X(
             "Week_Start:T",
-            timeUnit= "yearweek",
             title="Kalenderwoche",
-            axis=alt.Axis(format="%Y-KW%W")
+            axis=alt.Axis(labelExpr="datum.label")
         ),
         y=alt.Y(
             "Umsatzverlust_EUR:Q",
             title="Umsatzverlust (Euro)"
         ),
-        color=alt.Color("Lieferroute:N", title="Lieferroute")
+        color=alt.Color("Lieferroute:N", title="Lieferroute"),
+        tooltip=["KW_Label"]
     )
 )
 
@@ -74,15 +79,15 @@ chart_verz = (
     .encode(
         x=alt.X(
             "Week_Start:T",
-            timeUnit= "yearweek",
             title="Kalenderwoche",
-            axis=alt.Axis(format="%Y-KW%W")
+            axis=alt.Axis(labelExpr="datum.label")
         ),
         y=alt.Y(
             "Verzoegerung_Min:Q",
             title="Verzögerung (Minuten)"
         ),
-        color=alt.Color("Lieferroute:N", title="Lieferroute")
+        color=alt.Color("Lieferroute:N", title="Lieferroute"),
+        tooltip=["KW_Label"]
     )
 )
 
