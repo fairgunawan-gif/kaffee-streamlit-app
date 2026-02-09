@@ -15,3 +15,6 @@ team_row = df[df["Team"] == team]
 
 st.subheader("Selected Team Stats")
 st.write(team_row)
+
+if st.button("Send balloons!"):
+    st.balloons()

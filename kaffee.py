@@ -76,7 +76,7 @@ chart_umsatz = (
     base_umsatz.mark_line()
     + base_umsatz.mark_point(size=80)
 )
-st.altair_chart(chart_umsatz, use_container_width=True)
+st.altair_chart(chart_umsatz, width='stretch')
 
 
 st.subheader("Mittelwert von Verzoegerung pro Kalenderwoche")
@@ -100,10 +100,10 @@ chart_verz = (
     base_verz.mark_line()
     + base_verz.mark_point(size=80)
 )
-st.altair_chart(chart_verz, use_container_width=True)
+st.altair_chart(chart_verz, width='stretch')
 
 
-st.markdown("Last updated 07.02.26", text_alignment="left")
+st.markdown("Last updated 09.02.26", text_alignment="left")
 
 # Whenever you change the code:
 # In VS Code:
