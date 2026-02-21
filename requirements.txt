@@ -2,3 +2,6 @@ streamlit
 pandas
 openpyxl
 altair
+matplotlib
+selenium
+webdriver-manager
