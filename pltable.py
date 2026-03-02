@@ -276,11 +276,20 @@ if FORM_COL and "Team" in df.columns:
             vals.append(running)
         return vals
 
+    # build rows for line chart, optionally limiting to selected teams
     line_rows = []
+    # determine which teams to include based on the selector
+    filter_teams = None
+    if "selected_teams" in locals() and selected_teams:
+        filter_teams = set(selected_teams)
+
     if points_col:
         for _, row in df.iterrows():
             team = row.get("Team")
             if not team:
+                continue
+            # skip teams not selected (when the filter is active)
+            if filter_teams is not None and team not in filter_teams:
                 continue
             form_str = row.get(FORM_COL)
             current_pts = row.get(points_col)
@@ -332,6 +341,14 @@ if FORM_COL and "Team" in df.columns:
         with col_ln_m:
             st.subheader("Season Points — Last 6 Games")
             st.pyplot(fig_line)
+    else:
+        # no rows to plot, possibly because the user cleared the selection
+        col_ln_l, col_ln_m, col_ln_r = st.columns([1, 4, 1])
+        with col_ln_m:
+            if "selected_teams" in locals() and selected_teams:
+                st.info("No data available for the selected teams' last six games.")
+            else:
+                st.info("No season points data available to chart.")
 else:
     col_fr_l, col_fr_m, col_fr_r = st.columns([1, 4, 1])
     with col_fr_m:
