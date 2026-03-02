@@ -67,6 +67,30 @@ def form_label(form_str):
     return " ".join(_parse_results(form_str)[:6])
 
 
+def last6_season_points(form_str, current_pts):
+    """Return cumulative season points for the last 6 games (oldest → newest)."""
+    try:
+        total_now = int(current_pts)
+    except (TypeError, ValueError):
+        return []
+
+    results = _parse_results(form_str)[:6]
+    if not results:
+        return []
+
+    per_game = [
+        W if r == "W" else D if r == "D" else L
+        for r in results
+    ]
+    start = total_now - sum(per_game)
+    vals = []
+    running = start
+    for p in per_game:
+        running += p
+        vals.append(running)
+    return vals
+
+
 # ── UI ───────────────────────────────────────────────────────────────────────
 
 st.title("⚽ Premier League Table — Live from BBC Sport")
@@ -82,6 +106,15 @@ with st.spinner("Fetching live table…"):
 full_df = df.copy()
 points_col = next((c for c in full_df.columns if c.lower() in ("pts", "points")), None)
 
+# determine form column early for both charts and rankings
+FORM_COL = df.columns[-1]
+if "form" not in FORM_COL.lower():
+    FORM_COL = next((c for c in df.columns if "form" in c.lower()), None)
+
+# prepare a placeholder for the line-chart; the widget that drives it
+# will be rendered further down so we can compute the plot afterwards
+chart_container = st.container()
+
 if points_col and "Team" in full_df.columns:
     cols = list(full_df.columns)
     cols.remove(points_col)
@@ -92,11 +125,6 @@ if points_col and "Team" in full_df.columns:
 # Drop the last column from the displayed full table
 full_df_display = full_df.iloc[:, :-1]
 
-# Row 1: Full Table in middle column (1 : 4 : 1)
-col_ft_l, col_ft_m, col_ft_r = st.columns([1, 4, 1])
-with col_ft_m:
-    st.subheader("Full Table")
-    st.dataframe(full_df_display, use_container_width=True, hide_index=True)
 
 # ── Team filter: multiselect in left column, Selected Team Stats in middle (same row) ──
 
@@ -162,13 +190,78 @@ else:
     st.warning("Could not identify a 'Team' column in the scraped data.")
     st.write("Raw columns found:", list(df.columns))
 
-# ── Form ranking bar chart ────────────────────────────────────────────────────
+# after selector we can render the chart in the reserved container
+with chart_container:
+    # create the line chart using the (possibly empty) selection
+    points_col = next(
+        (c for c in df.columns if c.lower() in ("pts", "points")),
+        None,
+    )
+    line_rows = []
+    filter_teams = set(selected_teams) if ("selected_teams" in locals() and selected_teams) else None
+    if points_col:
+        for _, row in df.iterrows():
+            team = row.get("Team")
+            if not team:
+                continue
+            if filter_teams is not None and team not in filter_teams:
+                continue
+            form_str = row.get(FORM_COL)
+            current_pts = row.get(points_col)
+            seq = last6_season_points(form_str, current_pts)
+            if not seq:
+                continue
+            last_val = seq[-1]
+            for idx, val in enumerate(seq, start=1):
+                line_rows.append(
+                    {
+                        "Team": team,
+                        "Game": idx,
+                        "Points": val,
+                        "LastPoints": last_val,
+                    }
+                )
+    if line_rows:
+        line_df = pd.DataFrame(line_rows)
+        team_order = (
+            line_df.groupby("Team")["LastPoints"]
+            .max()
+            .sort_values(ascending=False)
+            .index.tolist()
+        )
+        fig_line, ax_line = plt.subplots(figsize=(9, 4.5))
+        for team in team_order:
+            sub = line_df[line_df["Team"] == team]
+            ax_line.plot(
+                sub["Game"],
+                sub["Points"],
+                marker="o",
+                linewidth=1.2,
+                label=team,
+            )
+        ax_line.set_xticks(range(1, 7))
+        ax_line.set_xlabel("Last 6 games (oldest → newest)")
+        ax_line.set_ylabel("Season points")
+        ax_line.set_title("Season Points over Last 6 Games")
+        ax_line.grid(axis="y", alpha=0.2)
+        ax_line.spines[["top", "right"]].set_visible(False)
+        ax_line.legend(loc="upper left", bbox_to_anchor=(1.02, 1), fontsize=8)
+        plt.tight_layout()
+        st.subheader("Season Points — Last 6 Games")
+        st.pyplot(fig_line)
+    else:
+        if "selected_teams" in locals() and selected_teams:
+            st.info("No data available for the selected teams' last six games.")
+        else:
+            st.info("No season points data available to chart.")
 
-# Use the last column of the full table as the form column;
-# fall back to any column whose name contains "form"
-FORM_COL = df.columns[-1]
-if "form" not in FORM_COL.lower():
-    FORM_COL = next((c for c in df.columns if "form" in c.lower()), None)
+    # display full table after the selector/chart
+    col_ft_l, col_ft_m, col_ft_r = st.columns([1, 4, 1])
+    with col_ft_m:
+        st.subheader("Full Table")
+        st.dataframe(full_df_display, use_container_width=True, hide_index=True)
+
+# ── Form ranking bar chart ────────────────────────────────────────────────────
 
 if FORM_COL and "Team" in df.columns:
     df["Form_pts"]   = df[FORM_COL].apply(form_points)
@@ -246,109 +339,6 @@ if FORM_COL and "Team" in df.columns:
         st.caption("Points: W = 3 · D = 1 · L = 0  (max 18)")
         st.pyplot(fig)
 
-    # ── Season points over last 6 games (line chart) ───────────────────────────
-
-    points_col = next(
-        (c for c in df.columns if c.lower() in ("pts", "points")),
-        None,
-    )
-
-    def last6_season_points(form_str, current_pts):
-        """Return cumulative season points for the last 6 games (oldest → newest)."""
-        try:
-            total_now = int(current_pts)
-        except (TypeError, ValueError):
-            return []
-
-        results = _parse_results(form_str)[:6]
-        if not results:
-            return []
-
-        per_game = [
-            W if r == "W" else D if r == "D" else L
-            for r in results
-        ]
-        start = total_now - sum(per_game)
-        vals = []
-        running = start
-        for p in per_game:
-            running += p
-            vals.append(running)
-        return vals
-
-    # build rows for line chart, optionally limiting to selected teams
-    line_rows = []
-    # determine which teams to include based on the selector
-    filter_teams = None
-    if "selected_teams" in locals() and selected_teams:
-        filter_teams = set(selected_teams)
-
-    if points_col:
-        for _, row in df.iterrows():
-            team = row.get("Team")
-            if not team:
-                continue
-            # skip teams not selected (when the filter is active)
-            if filter_teams is not None and team not in filter_teams:
-                continue
-            form_str = row.get(FORM_COL)
-            current_pts = row.get(points_col)
-            seq = last6_season_points(form_str, current_pts)
-            if not seq:
-                continue
-            last_val = seq[-1]
-            for idx, val in enumerate(seq, start=1):
-                line_rows.append(
-                    {
-                        "Team": team,
-                        "Game": idx,
-                        "Points": val,
-                        "LastPoints": last_val,
-                    }
-                )
-
-    if line_rows:
-        line_df = pd.DataFrame(line_rows)
-        team_order = (
-            line_df.groupby("Team")["LastPoints"]
-            .max()
-            .sort_values(ascending=False)
-            .index.tolist()
-        )
-
-        fig_line, ax_line = plt.subplots(figsize=(9, 4.5))
-
-        for team in team_order:
-            sub = line_df[line_df["Team"] == team]
-            ax_line.plot(
-                sub["Game"],
-                sub["Points"],
-                marker="o",
-                linewidth=1.2,
-                label=team,
-            )
-
-        ax_line.set_xticks(range(1, 7))
-        ax_line.set_xlabel("Last 6 games (oldest → newest)")
-        ax_line.set_ylabel("Season points")
-        ax_line.set_title("Season Points over Last 6 Games of Selected Team Stats")
-        ax_line.grid(axis="y", alpha=0.2)
-        ax_line.spines[["top", "right"]].set_visible(False)
-        ax_line.legend(loc="upper left", bbox_to_anchor=(1.02, 1), fontsize=8)
-        plt.tight_layout()
-
-        col_ln_l, col_ln_m, col_ln_r = st.columns([1, 4, 1])
-        with col_ln_m:
-            st.subheader("Season Points — Last 6 Games")
-            st.pyplot(fig_line)
-    else:
-        # no rows to plot, possibly because the user cleared the selection
-        col_ln_l, col_ln_m, col_ln_r = st.columns([1, 4, 1])
-        with col_ln_m:
-            if "selected_teams" in locals() and selected_teams:
-                st.info("No data available for the selected teams' last six games.")
-            else:
-                st.info("No season points data available to chart.")
 else:
     col_fr_l, col_fr_m, col_fr_r = st.columns([1, 4, 1])
     with col_fr_m:
