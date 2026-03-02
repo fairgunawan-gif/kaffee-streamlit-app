@@ -331,7 +331,7 @@ if FORM_COL and "Team" in df.columns:
         ax_line.set_xticks(range(1, 7))
         ax_line.set_xlabel("Last 6 games (oldest → newest)")
         ax_line.set_ylabel("Season points")
-        ax_line.set_title("Season Points over Last 6 Games")
+        ax_line.set_title("Season Points over Last 6 Games of Selected Team Stats")
         ax_line.grid(axis="y", alpha=0.2)
         ax_line.spines[["top", "right"]].set_visible(False)
         ax_line.legend(loc="upper left", bbox_to_anchor=(1.02, 1), fontsize=8)
