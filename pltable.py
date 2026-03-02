@@ -111,6 +111,17 @@ FORM_COL = df.columns[-1]
 if "form" not in FORM_COL.lower():
     FORM_COL = next((c for c in df.columns if "form" in c.lower()), None)
 
+# compute default selection as the top‑4 teams by last‑6 form points
+default_teams = []
+if FORM_COL and "Team" in df.columns:
+    tmp = df.copy()
+    tmp["Form_pts"] = tmp[FORM_COL].apply(form_points)
+    default_teams = (
+        tmp.sort_values("Form_pts", ascending=False)["Team"]
+        .head(4)
+        .tolist()
+    )
+
 # prepare a placeholder for the line-chart; the widget that drives it
 # will be rendered further down so we can compute the plot afterwards
 chart_container = st.container()
@@ -136,7 +147,7 @@ if "Team" in df.columns:
         selected_teams = st.multiselect(
             "Select between 1 and 4 teams",
             options=all_teams,
-            default=list(all_teams[:1]),
+            default=default_teams or list(all_teams[:1]),
             max_selections=4,
         )
 
@@ -255,11 +266,6 @@ with chart_container:
         else:
             st.info("No season points data available to chart.")
 
-    # display full table after the selector/chart
-    col_ft_l, col_ft_m, col_ft_r = st.columns([1, 4, 1])
-    with col_ft_m:
-        st.subheader("Full Table")
-        st.dataframe(full_df_display, use_container_width=True, hide_index=True)
 
 # ── Form ranking bar chart ────────────────────────────────────────────────────
 
@@ -339,10 +345,21 @@ if FORM_COL and "Team" in df.columns:
         st.caption("Points: W = 3 · D = 1 · L = 0  (max 18)")
         st.pyplot(fig)
 
+    # append full table at bottom of page
+    col_ft_l, col_ft_m, col_ft_r = st.columns([1, 4, 1])
+    with col_ft_m:
+        st.subheader("Full Table")
+        st.dataframe(full_df_display, use_container_width=True, hide_index=True)
+
 else:
     col_fr_l, col_fr_m, col_fr_r = st.columns([1, 4, 1])
     with col_fr_m:
         st.info("No Form column found in the scraped data — chart unavailable.")
+    # still show table at bottom even if no form data
+    col_ft_l, col_ft_m, col_ft_r = st.columns([1, 4, 1])
+    with col_ft_m:
+        st.subheader("Full Table")
+        st.dataframe(full_df_display, use_container_width=True, hide_index=True)
 
 # ── Balloons ──────────────────────────────────────────────────────────────────
 
