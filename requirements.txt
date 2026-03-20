@@ -5,3 +5,7 @@ altair
 matplotlib
 requests
 lxml
+beautifulsoup4
+scikit-learn
+seaborn
+numpy
