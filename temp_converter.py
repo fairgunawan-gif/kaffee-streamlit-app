@@ -41,3 +41,8 @@ else:
     st.latex(r"T_{C} = (T_{F} - 32) \times \frac{5}{9}")
 
 st.write("Powered by Python and Streamlit.")
+
+# for pushing to GitHub:
+# git add .
+# git commit -m "Describe your change"
+# git push
