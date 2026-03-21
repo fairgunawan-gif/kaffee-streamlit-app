@@ -125,7 +125,7 @@ st.pyplot(fig)
 
 st.write("### Classification report")
 # st.text(classification_report(y_test, y_pred))
-st.text(f"target {target_column} {classification_report(y_test, y_pred)}")
+st.text(f"{target_column} {classification_report(y_test, y_pred)}")
 
 st.write("### Best depth summary")
 best_depth = results_df.loc[results_df["accuracy"].idxmax(), "depth"]
