@@ -8,9 +8,9 @@ import matplotlib.pyplot as plt
 st.set_page_config(page_title="Decision Tree Classifier", page_icon="🌳", layout="wide")
 
 st.title("Interactive Decision Tree Classification")
-st.write("Upload labeled training data, adjust tree depth, and evaluate performance layer-by-layer.")
+st.write("Upload labeled training data, evaluate performance depth-by-depth, feature-by-feature and test set size.")
 
-uploaded = st.file_uploader("Upload a CSV file with features and target", type=["csv"])
+uploaded = st.file_uploader("Optional: Upload a CSV file with features and target", type=["csv"])
 
 sklearn_options = {
     "Iris": "iris",
@@ -38,7 +38,7 @@ else:
 
     df = pd.concat([ds.data, ds.target.rename("target")], axis=1)
 
-st.write("### Dataset preview")
+st.write("### Dataset preview (works with features value of type number)")
 st.dataframe(df.head())
 
 all_columns = df.columns.tolist()
