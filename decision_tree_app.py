@@ -71,11 +71,6 @@ with col_right:
     max_depth_input = st.slider("Max tree depth to evaluate", min_value=1, max_value=10, value=5)
     test_size = st.slider("Test set size (%)", min_value=10, max_value=50, value=20)
 
-    st.write("### Best depth summary")
-    best_depth = results_df.loc[results_df["accuracy"].idxmax(), "depth"]
-    best_acc = results_df["accuracy"].max()
-    st.write(f"Best depth: {best_depth} with accuracy {best_acc:.4f}")
-
 X = df[feature_columns]
 y = df[target_column]
 
@@ -132,7 +127,7 @@ st.write("### Classification report")
 # st.text(classification_report(y_test, y_pred))
 st.text(f"{target_column} {classification_report(y_test, y_pred)}")
 
-# st.write("### Best depth summary")
-# best_depth = results_df.loc[results_df["accuracy"].idxmax(), "depth"]
-# best_acc = results_df["accuracy"].max()
-# st.write(f"Best depth: {best_depth} with accuracy {best_acc:.4f}")
+st.write("### Best depth summary")
+best_depth = results_df.loc[results_df["accuracy"].idxmax(), "depth"]
+best_acc = results_df["accuracy"].max()
+st.write(f"Best depth: {best_depth} with accuracy {best_acc:.4f}")
