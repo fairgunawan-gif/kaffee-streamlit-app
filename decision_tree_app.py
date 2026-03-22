@@ -45,7 +45,8 @@ else:
         ds = load_digits(as_frame=True)
         df = pd.concat([ds.data, ds.target.rename("target")], axis=1)
     elif key == "penguins":
-        df = sns.load_dataset("penguins").dropna()
+        url = "https://raw.githubusercontent.com/mwaskom/seaborn-data/master/penguins.csv"
+        df = pd.read_csv(url).dropna()
         df = df.rename(columns={"species": "target"})
         df["island"] = df["island"].astype("category").cat.codes
         df["sex"] = df["sex"].astype("category").cat.codes
