@@ -38,7 +38,7 @@ else:
 
     df = pd.concat([ds.data, ds.target.rename("target")], axis=1)
 
-st.write("### Dataset preview (works with features value of type number)")
+st.write("### Dataset preview (with features of dtype number)")
 st.dataframe(df.head())
 
 all_columns = df.columns.tolist()
@@ -95,7 +95,7 @@ results_df = pd.DataFrame(results, columns=["depth", "accuracy"])
 
 # Left column: Plot
 with col_left:
-    st.write("## Vary Test-set Size to Show Accuracy using different Depth")
+    st.write("## Vary Test-set Size to Show Accuracy at different Depth")
     if results_df.empty:
         st.warning("No depth results available. Adjust max depth or check data.")
     else:
