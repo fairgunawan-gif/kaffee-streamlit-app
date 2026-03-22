@@ -154,7 +154,15 @@ importance_df = pd.DataFrame({
     "Importance": clf_full.feature_importances_
 }).sort_values("Importance", ascending=False)
 
-st.bar_chart(importance_df.set_index("Feature"))
+# st.bar_chart(importance_df.set_index("Feature"))
+fig_imp, ax_imp = plt.subplots(figsize=(8, 4))
+ax_imp.bar(importance_df["Feature"], clf_full.feature_importances_)
+ax_imp.set_xlabel("Feature")
+ax_imp.set_ylabel("Importance")
+ax_imp.set_title("Feature Importances")
+plt.xticks(rotation=45, ha="right")
+plt.tight_layout()
+st.pyplot(fig_imp)
 
 importance_df["Importance"] = importance_df["Importance"].map("{:.3f}".format)
 st.dataframe(importance_df)
