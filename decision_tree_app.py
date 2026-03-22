@@ -95,7 +95,7 @@ results_df = pd.DataFrame(results, columns=["depth", "accuracy"])
 
 # Left column: Plot
 with col_left:
-    st.write("## Vary Test-set Size to Show Accuracy at different Depth")
+    st.write("##Accuracy at different Depth. Vary test size on right slider to see how it changes.")
     if results_df.empty:
         st.warning("No depth results available. Adjust max depth or check data.")
     else:
