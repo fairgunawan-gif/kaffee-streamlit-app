@@ -88,6 +88,13 @@ y = df[target_column]
 if y.dtype == object or y.dtype.name == 'category':
     y = y.astype('category').cat.codes
 
+# encode categorical feature columns ---
+X = X.copy()
+for col in X.columns:
+    if X[col].dtype == object or X[col].dtype.name == 'category':
+        X[col] = X[col].astype('category').cat.codes
+
+
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size / 100.0, random_state=42, stratify=y)
 
 st.write(f"Training samples: {X_train.shape[0]}, Test samples: {X_test.shape[0]}")
