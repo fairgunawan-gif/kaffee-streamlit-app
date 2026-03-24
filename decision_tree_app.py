@@ -146,20 +146,17 @@ st.text(f"Target: {target_column}\n\n{classification_report(y_test, y_pred)}")
 
 # --- Feature importances ---
 st.write("### Feature Importances")
-clf_full = DecisionTreeClassifier(max_depth=max_depth_input, random_state=42)
-clf_full.fit(X_train, y_train)
 
 importance_df = pd.DataFrame({
     "Feature": feature_columns,
-    "Importance": clf_full.feature_importances_
+    "Importance": clf.feature_importances_        # clf = selected_depth, not clf_full
 }).sort_values("Importance", ascending=False)
 
-# st.bar_chart(importance_df.set_index("Feature"))
 fig_imp, ax_imp = plt.subplots(figsize=(8, 4))
-ax_imp.bar(importance_df["Feature"], clf_full.feature_importances_)
+ax_imp.bar(importance_df["Feature"], importance_df["Importance"])
 ax_imp.set_xlabel("Feature")
 ax_imp.set_ylabel("Importance")
-ax_imp.set_title("Feature Importances")
+ax_imp.set_title(f"Feature Importances at depth {selected_depth}")
 plt.xticks(rotation=45, ha="right")
 plt.tight_layout()
 st.pyplot(fig_imp)
