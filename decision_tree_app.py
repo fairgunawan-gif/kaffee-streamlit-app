@@ -1,3 +1,19 @@
+# todo 0: allow numerical and categorical values for features and targets.
+# todo 00: add pairplot between features colored by target to show feature relationships and class separation.
+# todo 000: add option to load data from url instead of just file upload, for easier testing with public datasets.
+# todo1: Add option to evaluate on validation set instead of test set, and show train/val curves as depth increases.
+# todo2: Add option to evaluate on test set, and show train/test curves as depth increases.
+# todo3: Add option to show feature importances as depth increases.
+# todo4: Add option to show tree structure as depth increases.
+# todo5: Add option to show classification report as depth increases.
+# todo6: Add option to show confusion matrix as depth increases.
+# todo7: Add option to show precision-recall curve as depth increases.
+# todo8: Add option to show ROC curve as depth increases.
+# todo9: Add option to show learning curve (train/val accuracy vs depth) as depth increases.
+# todo10: Add option to show validation curve (train/val accuracy vs depth) as depth increases.
+
+
+
 import streamlit as st
 import pandas as pd
 from sklearn.model_selection import train_test_split
@@ -113,7 +129,7 @@ results_df = pd.DataFrame(results, columns=["depth", "accuracy"])
 col_left, col_right = st.columns(2)
 
 with col_left:
-    st.write("Accuracy at different Depth. Vary test size on right slider to see how it changes.")
+    st.write("Accuracy at different Depth. Vary test size using slider to see how it changes.")
     if results_df.empty:
         st.warning("No depth results available. Adjust max depth or check data.")
     else:
