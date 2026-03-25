@@ -1,6 +1,7 @@
 # todo 0: allow numerical and categorical values for features and targets.
 # todo 00: add pairplot between features colored by target to show feature relationships and class separation.
 # todo 000: add option to load data from url instead of just file upload, for easier testing with public datasets.
+# todo 0000: add option to show entropy/gini impurity at each node in the tree visualization, to better understand the splits.
 # todo1: Add option to evaluate on validation set instead of test set, and show train/val curves as depth increases.
 # todo2: Add option to evaluate on test set, and show train/test curves as depth increases.
 # todo3: Add option to show feature importances as depth increases.
