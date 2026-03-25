@@ -78,8 +78,8 @@ if len(feature_columns) == 0:
 
 # --- Sliders BEFORE computation ---
 st.write("### Model Parameters")
-max_depth_input = st.slider("Max tree depth to evaluate", min_value=1, max_value=10, value=5)
-test_size = st.slider("Test set size (%)", min_value=10, max_value=50, value=20)
+max_depth_input = st.slider("Max tree depth to evaluate", min_value=1, max_value=10, value=3)
+test_size = st.slider("Test set size (%)", min_value=0, max_value=50, value=20)
 
 X = df[feature_columns]
 y = df[target_column]
