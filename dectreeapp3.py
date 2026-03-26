@@ -103,7 +103,6 @@ if len(feature_columns) == 0:
 st.write("### Model Parameters")
 max_depth_input = st.slider("Max tree depth to evaluate", min_value=1, max_value=10, value=3)
 # test_size = st.slider("Test set size (%)", min_value=1, max_value=50, value=20)
-max_depth_input = st.slider("Max tree depth to evaluate", min_value=1, max_value=10, value=3)
 
 use_all_data = st.checkbox("Use all data for tree building only (no train/test split)", value=False)
 
@@ -146,7 +145,7 @@ else:
     st.write(f"Training samples: {X_train.shape[0]}, Test samples: {X_test.shape[0]}")
 
 
-st.write(f"Training samples: {X_train.shape[0]}, Test samples: {X_test.shape[0]}")
+# st.write(f"Training samples: {X_train.shape[0]}, Test samples: {X_test.shape[0]}")
 
 # --- Depth accuracy loop ---
 results = []
