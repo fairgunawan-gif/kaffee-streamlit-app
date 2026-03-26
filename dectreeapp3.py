@@ -102,7 +102,16 @@ if len(feature_columns) == 0:
 # --- Sliders BEFORE computation ---
 st.write("### Model Parameters")
 max_depth_input = st.slider("Max tree depth to evaluate", min_value=1, max_value=10, value=3)
-test_size = st.slider("Test set size (%)", min_value=1, max_value=50, value=20)
+# test_size = st.slider("Test set size (%)", min_value=1, max_value=50, value=20)
+max_depth_input = st.slider("Max tree depth to evaluate", min_value=1, max_value=10, value=3)
+
+use_all_data = st.checkbox("Use all data for tree building only (no train/test split)", value=False)
+
+if use_all_data:
+    test_size = 0
+    st.info("Using all data for training. Accuracy reflects training data — no separate test evaluation.")
+else:
+    test_size = st.slider("Test set size (%)", min_value=1, max_value=50, value=20)
 
 # --- Encode features and target ---
 X = df[feature_columns].copy()
@@ -120,9 +129,22 @@ for col in X.columns:
     if X[col].dtype == object or X[col].dtype.name == 'category':
         X[col] = X[col].astype('category').cat.codes
 
-X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=test_size / 100.0, random_state=42, stratify=y
-)
+# X_train, X_test, y_train, y_test = train_test_split(
+#     X, y, test_size=test_size / 100.0, random_state=42, stratify=y
+# )
+
+if use_all_data:
+    X_train = X
+    X_test  = X
+    y_train = y
+    y_test  = y
+    st.write(f"Training samples: {X_train.shape[0]} (all data)")
+else:
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=test_size / 100.0, random_state=42, stratify=y
+    )
+    st.write(f"Training samples: {X_train.shape[0]}, Test samples: {X_test.shape[0]}")
+
 
 st.write(f"Training samples: {X_train.shape[0]}, Test samples: {X_test.shape[0]}")
 
