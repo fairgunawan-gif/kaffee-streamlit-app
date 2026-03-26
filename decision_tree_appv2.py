@@ -1,0 +1,214 @@
+# todo 0: allow numerical and categorical values for features and targets.
+# todo 00: add pairplot between features colored by target to show feature relationships and class separation.
+# todo 000: add option to load data from url instead of just file upload, for easier testing with public datasets.
+# todo 0000: add option to show entropy/gini impurity at each node in the tree visualization, to better understand the splits.
+# todo1: Add option to evaluate on validation set instead of test set, and show train/val curves as depth increases.
+# todo2: Add option to evaluate on test set, and show train/test curves as depth increases.
+# todo3: Add option to show feature importances as depth increases.
+# todo4: Add option to show tree structure as depth increases.
+# todo5: Add option to show classification report as depth increases.
+# todo6: Add option to show confusion matrix as depth increases.
+# todo7: Add option to show precision-recall curve as depth increases.
+# todo8: Add option to show ROC curve as depth increases.
+# todo9: Add option to show learning curve (train/val accuracy vs depth) as depth increases.
+# todo10: Add option to show validation curve (train/val accuracy vs depth) as depth increases.
+
+
+import numpy as np
+import streamlit as st
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeClassifier, plot_tree
+from sklearn.metrics import accuracy_score, classification_report
+from sklearn.datasets import load_iris, load_wine, load_breast_cancer, load_digits
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+st.set_page_config(page_title="Decision Tree Classifier", page_icon="🌳", layout="wide")
+
+st.title("Interactive Decision Tree Classification")
+st.write("Upload labeled training data, evaluate performance depth-by-depth, feature-by-feature and test set size.")
+
+uploaded = st.file_uploader("Optional: Upload a CSV file with features and target", type=["csv"])
+
+sklearn_options = {
+    "Iris": "iris",
+    "Wine": "wine",
+    "Breast Cancer": "breast_cancer",
+    "Digits": "digits",
+    "Penguins": "penguins",
+}
+
+dataset_from_sklearn = st.selectbox("Or pick a built-in sklearn dataset", list(sklearn_options.keys()), index=0)
+
+if uploaded is not None:
+    df = pd.read_csv(uploaded)
+    st.success("CSV loaded successfully")
+else:
+    st.info(f"Using built-in {dataset_from_sklearn} data. Upload a CSV to override.")
+
+    key = sklearn_options[dataset_from_sklearn]
+
+    if key == "iris":
+        ds = load_iris(as_frame=True)
+        df = pd.concat([ds.data, ds.target.rename("target")], axis=1)
+    elif key == "wine":
+        ds = load_wine(as_frame=True)
+        df = pd.concat([ds.data, ds.target.rename("target")], axis=1)
+    elif key == "breast_cancer":
+        ds = load_breast_cancer(as_frame=True)
+        df = pd.concat([ds.data, ds.target.rename("target")], axis=1)
+    elif key == "digits":
+        ds = load_digits(as_frame=True)
+        df = pd.concat([ds.data, ds.target.rename("target")], axis=1)
+    elif key == "penguins":
+        url = "https://raw.githubusercontent.com/mwaskom/seaborn-data/master/penguins.csv"
+        df = pd.read_csv(url).dropna()
+        df = df.rename(columns={"species": "target"})
+        df["island"] = df["island"].astype("category").cat.codes
+        df["sex"] = df["sex"].astype("category").cat.codes
+
+st.write("### Dataset preview")
+st.dataframe(df.head())
+
+all_columns = df.columns.tolist()
+if len(all_columns) < 2:
+    st.warning("Need at least one feature and one target column.")
+    st.stop()
+
+target_column = st.selectbox("Select target column", all_columns, index=len(all_columns)-1)
+
+default_features = [col for col in all_columns if col != target_column]
+feature_columns = st.multiselect(
+    "Select feature columns",
+    all_columns,
+    default=default_features,
+)
+
+if target_column in feature_columns:
+    st.warning("Target column cannot also be a feature. Please adjust your selection.")
+    st.stop()
+
+if len(feature_columns) == 0:
+    st.warning("At least one feature column is required.")
+    st.stop()
+
+# --- Sliders BEFORE computation ---
+st.write("### Model Parameters")
+# criterion = st.radio("Split criterion", options=["gini", "entropy"], horizontal=True)
+max_depth_input = st.slider("Max tree depth to evaluate", min_value=1, max_value=10, value=3)
+test_size = st.slider("Test set size (%)", min_value=0, max_value=50, value=20)
+
+X = df[feature_columns]
+y = df[target_column]
+
+# If target is not numeric, encode it
+if y.dtype == object or y.dtype.name == 'category':
+    y = y.astype('category').cat.codes
+
+# encode categorical feature columns ---
+X = X.copy()
+for col in X.columns:
+    if X[col].dtype == object or X[col].dtype.name == 'category':
+        X[col] = X[col].astype('category').cat.codes
+
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size / 100.0, random_state=42, stratify=y)
+
+st.write(f"Training samples: {X_train.shape[0]}, Test samples: {X_test.shape[0]}")
+
+results = []
+for depth in range(1, max_depth_input + 1):
+    clf = DecisionTreeClassifier(max_depth=depth, random_state=42)
+    clf.fit(X_train, y_train)
+    y_pred = clf.predict(X_test)
+    acc = accuracy_score(y_test, y_pred)
+    results.append((depth, acc))
+
+results_df = pd.DataFrame(results, columns=["depth", "accuracy"])
+
+# --- Two columns: chart left, best depth right ---
+col_left, col_right = st.columns(2)
+
+with col_left:
+    st.write("Accuracy at different Depth. Vary test size using slider to see how it changes.")
+    if results_df.empty:
+        st.warning("No depth results available. Adjust max depth or check data.")
+    else:
+        st.line_chart(results_df.set_index("depth"))
+
+with col_right:
+    st.write("### Best depth summary")
+    best_depth = results_df.loc[results_df["accuracy"].idxmax(), "depth"]
+    best_acc = results_df["accuracy"].max()
+    st.write(f"Best depth: {best_depth} with accuracy {best_acc:.4f}")
+
+# --- Tree inspection ---
+selected_depth = st.select_slider("Select depth to inspect", options=list(range(1, max_depth_input + 1)), value=3)
+
+clf = DecisionTreeClassifier(max_depth=selected_depth, random_state=42)
+clf.fit(X_train, y_train)
+y_pred = clf.predict(X_test)
+acc = accuracy_score(y_test, y_pred)
+
+st.write(f"### Tree at depth {selected_depth}")
+st.write(f"Accuracy at this depth: {acc:.4f}")
+
+fig, ax = plt.subplots(figsize=(12, 8))
+artists = plot_tree(
+    clf,
+    feature_names=feature_columns,
+    class_names=[str(c) for c in sorted(y.unique())],
+    filled=True,
+    rounded=True,
+    fontsize=8,
+    ax=ax,
+)
+
+# Only the first node_count artists are nodes, the rest are edges
+tree_ = clf.tree_
+for i in range(tree_.node_count):
+    artist = artists[i]
+    current_text = artist.get_text()
+
+    for node_id in range(tree_.node_count):
+        node_samples = tree_.n_node_samples[node_id]
+        node_gini = tree_.impurity[node_id]
+        # Match by both samples AND gini to avoid collisions
+        if (f"samples = {node_samples}" in current_text and
+                f"{node_gini:.3f}" in current_text):
+            values = tree_.value[node_id][0]
+            total = values.sum()
+            if total > 0:
+                probs = values / total
+                probs_nz = probs[probs > 0]
+                entropy = -np.sum(probs_nz * np.log2(probs_nz))
+            else:
+                entropy = 0.0
+            artist.set_text(current_text + f"\nentropy = {entropy:.3f}")
+            break
+
+st.pyplot(fig)
+
+st.write("### Classification report")
+st.text(f"Target: {target_column}\n\n{classification_report(y_test, y_pred)}")
+
+# --- Feature importances ---
+st.write("### Feature Importances")
+
+importance_df = pd.DataFrame({
+    "Feature": feature_columns,
+    "Importance": clf.feature_importances_        # clf = selected_depth, not clf_full
+}).sort_values("Importance", ascending=False)
+
+fig_imp, ax_imp = plt.subplots(figsize=(8, 4))
+ax_imp.bar(importance_df["Feature"], importance_df["Importance"])
+ax_imp.set_xlabel("Feature")
+ax_imp.set_ylabel("Importance")
+ax_imp.set_title(f"Feature Importances at depth {selected_depth}")
+plt.xticks(rotation=45, ha="right")
+plt.tight_layout()
+st.pyplot(fig_imp)
+
+importance_df["Importance"] = importance_df["Importance"].map("{:.3f}".format)
+st.dataframe(importance_df)
