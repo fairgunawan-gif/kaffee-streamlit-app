@@ -103,23 +103,23 @@ if len(feature_columns) == 0:
     st.stop()
 
 # ---------------------------------------------------------------------------
-# Model Parameters
+# Two-column layout: Model Parameters left, Pairplot right
 # ---------------------------------------------------------------------------
-st.write("### Model Parameters")
+col_params, col_pairplot = st.columns(2)
 
-algorithm = st.radio("Algorithm", ["Decision Tree", "Random Forest"], horizontal=True)
-max_depth_input = st.slider("Max tree depth to evaluate", min_value=1, max_value=10, value=3)
-
-if algorithm == "Random Forest":
-    n_estimators = st.slider("Number of trees", min_value=10, max_value=500, value=100, step=10)
-
-use_all_data = st.checkbox("Use all data for tree building only (no train/test split)", value=False)
-
-if not use_all_data:
-    test_size = st.slider("Test set size (%)", min_value=1, max_value=50, value=20)
+# --- LEFT: Model Parameters ---
+with col_params:
+    st.write("### Model Parameters")
+    algorithm = st.radio("Algorithm", ["Decision Tree", "Random Forest"], horizontal=True)
+    max_depth_input = st.slider("Max tree depth to evaluate", min_value=1, max_value=10, value=3)
+    if algorithm == "Random Forest":
+        n_estimators = st.slider("Number of trees", min_value=10, max_value=500, value=100, step=10)
+    use_all_data = st.checkbox("Use all data for tree building only (no train/test split)", value=False)
+    if not use_all_data:
+        test_size = st.slider("Test set size (%)", min_value=1, max_value=50, value=20)
 
 # ---------------------------------------------------------------------------
-# Encode features and target
+# Encode features and target (must happen before pairplot and training)
 # ---------------------------------------------------------------------------
 X = df[feature_columns].copy()
 y = df[target_column].copy()
@@ -144,12 +144,34 @@ if use_all_data:
     X_test  = X
     y_train = y
     y_test  = y
-    st.write(f"Training samples: {X_train.shape[0]} (all data — training accuracy only)")
+    with col_params:
+        st.write(f"Training samples: {X_train.shape[0]} (all data — training accuracy only)")
 else:
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=test_size / 100.0, random_state=42, stratify=y
     )
-    st.write(f"Training samples: {X_train.shape[0]}, Test samples: {X_test.shape[0]}")
+    with col_params:
+        st.write(f"Training samples: {X_train.shape[0]}, Test samples: {X_test.shape[0]}")
+
+# --- RIGHT: Pairplot ---
+with col_pairplot:
+    st.write("### Pairplot — Feature Relationships colored by Target")
+    max_pairplot_features = 6
+    pairplot_features = feature_columns[:max_pairplot_features]
+    if len(pairplot_features) < 2:
+        st.info("Select at least 2 feature columns to show the pairplot.")
+    else:
+        if len(feature_columns) > max_pairplot_features:
+            st.caption(f"Showing first {max_pairplot_features} features only to keep the plot readable.")
+        try:
+            pairplot_df = X[pairplot_features].copy()
+            pairplot_df["target"] = y_labels.values
+            fig_pair = sns.pairplot(pairplot_df, hue="target", diag_kind="kde", plot_kws={"alpha": 0.6})
+            fig_pair.fig.suptitle(f"Pairplot colored by {target_column}", y=1.02)
+            st.pyplot(fig_pair.fig)
+            plt.close()
+        except Exception as e:
+            st.warning(f"Could not render pairplot: {e}")
 
 # ---------------------------------------------------------------------------
 # Helper: build classifier
@@ -173,46 +195,20 @@ for depth in range(1, max_depth_input + 1):
 
 results_df = pd.DataFrame(results, columns=["depth", "accuracy"])
 
-# ---------------------------------------------------------------------------
-# Two columns: accuracy chart left, best depth right
-# ---------------------------------------------------------------------------
-col_left, col_right = st.columns(2)
-
-with col_left:
+with col_params:
+    # Accuracy chart — below training/test sample info
     st.write("Accuracy at different Depth. Vary test size using slider to see how it changes.")
     if results_df.empty:
         st.warning("No depth results available. Adjust max depth or check data.")
     else:
         st.line_chart(results_df.set_index("depth"))
 
-with col_right:
+    # Best depth summary — below accuracy chart
     st.write("### Best depth summary")
     best_depth = results_df.loc[results_df["accuracy"].idxmax(), "depth"]
     best_acc   = results_df["accuracy"].max()
     st.write(f"Algorithm: {algorithm}")
     st.write(f"Best depth: {best_depth} with accuracy {best_acc:.4f}")
-
-# ---------------------------------------------------------------------------
-# Pairplot
-# ---------------------------------------------------------------------------
-st.write("### Pairplot — Feature Relationships colored by Target")
-max_pairplot_features = 6
-pairplot_features = feature_columns[:max_pairplot_features]
-
-if len(pairplot_features) < 2:
-    st.info("Select at least 2 feature columns to show the pairplot.")
-else:
-    if len(feature_columns) > max_pairplot_features:
-        st.caption(f"Showing first {max_pairplot_features} features only to keep the plot readable.")
-    try:
-        pairplot_df = X[pairplot_features].copy()
-        pairplot_df["target"] = y_labels.values
-        fig_pair = sns.pairplot(pairplot_df, hue="target", diag_kind="kde", plot_kws={"alpha": 0.6})
-        fig_pair.fig.suptitle(f"Pairplot colored by {target_column}", y=1.02)
-        st.pyplot(fig_pair.fig)
-        plt.close()
-    except Exception as e:
-        st.warning(f"Could not render pairplot: {e}")
 
 # ---------------------------------------------------------------------------
 # Tree inspection at selected depth
@@ -276,54 +272,49 @@ else:
     )
 
 # ---------------------------------------------------------------------------
-# Classification report
+# Three-column layout: Classification report | Feature Importances | Manual Prediction
 # ---------------------------------------------------------------------------
-st.write("### Classification report")
-st.text(f"Target: {target_column}\n\n{classification_report(y_test, y_pred)}")
+col_report, col_importance, col_predict = st.columns(3)
 
-# ---------------------------------------------------------------------------
-# Feature importances
-# ---------------------------------------------------------------------------
-st.write("### Feature Importances")
+# --- LEFT 1/3: Classification report ---
+with col_report:
+    st.write("### Classification report")
+    st.text(f"Target: {target_column}\n\n{classification_report(y_test, y_pred)}")
 
-importance_df = pd.DataFrame({
-    "Feature":    feature_columns,
-    "Importance": clf.feature_importances_
-}).sort_values("Importance", ascending=False)
+# --- MIDDLE 1/3: Feature importances ---
+with col_importance:
+    st.write("### Feature Importances")
 
-fig_imp, ax_imp = plt.subplots(figsize=(8, 4))
-ax_imp.bar(importance_df["Feature"], importance_df["Importance"])
-ax_imp.set_xlabel("Feature")
-ax_imp.set_ylabel("Importance")
-ax_imp.set_title(f"Feature Importances — {algorithm} at depth {selected_depth}")
-plt.xticks(rotation=45, ha="right")
-plt.tight_layout()
-st.pyplot(fig_imp)
+    importance_df = pd.DataFrame({
+        "Feature":    feature_columns,
+        "Importance": clf.feature_importances_
+    }).sort_values("Importance", ascending=False)
 
-importance_df["Importance"] = importance_df["Importance"].map("{:.3f}".format)
-st.dataframe(importance_df)
+    fig_imp, ax_imp = plt.subplots(figsize=(5, 4))
+    ax_imp.bar(importance_df["Feature"], importance_df["Importance"])
+    ax_imp.set_xlabel("Feature")
+    ax_imp.set_ylabel("Importance")
+    ax_imp.set_title(f"Importances at depth {selected_depth}")
+    plt.xticks(rotation=45, ha="right")
+    plt.tight_layout()
+    st.pyplot(fig_imp)
 
-# ---------------------------------------------------------------------------
-# Manual prediction input
-# ---------------------------------------------------------------------------
-st.write("### Manual Prediction")
-st.write("Enter feature values below to predict the target class.")
+    importance_df["Importance"] = importance_df["Importance"].map("{:.3f}".format)
+    st.dataframe(importance_df)
 
-input_values = {}
-input_cols = st.columns(min(len(feature_columns), 4))
+# --- RIGHT 1/3: Manual prediction ---
+with col_predict:
+    st.write("### Manual Prediction")
+    st.write("Enter feature values below to predict the target class.")
 
-for idx, col_name in enumerate(feature_columns):
-    col_widget = input_cols[idx % len(input_cols)]
-    original_col = df[col_name]
+    input_values = {}
 
-    with col_widget:
+    for col_name in feature_columns:
+        original_col = df[col_name]
         if original_col.dtype == object or original_col.dtype.name == "category":
-            # Show original string options for categorical columns
-            unique_vals = sorted(df[col_name].dropna().unique().tolist())
+            unique_vals  = sorted(df[col_name].dropna().unique().tolist())
             selected_val = st.selectbox(f"{col_name}", unique_vals, key=f"input_{col_name}")
-            # Encode to match training encoding
-            encoded_val = unique_vals.index(selected_val)
-            input_values[col_name] = encoded_val
+            input_values[col_name] = unique_vals.index(selected_val)
         else:
             col_min  = float(original_col.min())
             col_max  = float(original_col.max())
@@ -336,24 +327,23 @@ for idx, col_name in enumerate(feature_columns):
                 key=f"input_{col_name}"
             )
 
-if st.button("Predict"):
-    input_df = pd.DataFrame([input_values])
+    if st.button("Predict"):
+        input_df = pd.DataFrame([input_values])
 
-    prediction_encoded = clf.predict(input_df)[0]
-    prediction_proba   = clf.predict_proba(input_df)[0]
+        prediction_encoded = clf.predict(input_df)[0]
+        prediction_proba   = clf.predict_proba(input_df)[0]
 
-    # Map encoded prediction back to original label
-    unique_encoded = sorted(y.unique())
-    unique_labels  = sorted(y_labels.unique())
-    label_map      = dict(zip(unique_encoded, unique_labels))
-    prediction_label = label_map.get(prediction_encoded, str(prediction_encoded))
+        # Map encoded prediction back to original label
+        unique_encoded   = sorted(y.unique())
+        unique_labels    = sorted(y_labels.unique())
+        label_map        = dict(zip(unique_encoded, unique_labels))
+        prediction_label = label_map.get(prediction_encoded, str(prediction_encoded))
 
-    st.success(f"Predicted {target_column}: **{prediction_label}**")
+        st.success(f"Predicted {target_column}: **{prediction_label}**")
 
-    # Show class probabilities
-    proba_df = pd.DataFrame({
-        "Class":       [label_map.get(c, str(c)) for c in unique_encoded],
-        "Probability": [f"{p:.3f}" for p in prediction_proba]
-    })
-    st.write("Class probabilities:")
-    st.dataframe(proba_df, hide_index=True)
+        proba_df = pd.DataFrame({
+            "Class":       [label_map.get(c, str(c)) for c in unique_encoded],
+            "Probability": [f"{p:.3f}" for p in prediction_proba]
+        })
+        st.write("Class probabilities:")
+        st.dataframe(proba_df, hide_index=True)
