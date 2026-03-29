@@ -18,11 +18,32 @@ st.write("Upload labeled training data, evaluate performance depth-by-depth, fea
 # Data loading: built-in, file upload, or URL
 # ---------------------------------------------------------------------------
 sklearn_options = {
-    "Iris": "iris",
-    "Wine": "wine",
-    "Breast Cancer": "breast_cancer",
-    "Digits": "digits",
-    "Penguins": "penguins",
+    # sklearn datasets
+    "Iris (sklearn)":          "iris",
+    "Wine (sklearn)":          "wine",
+    "Breast Cancer (sklearn)": "breast_cancer",
+    "Digits (sklearn)":        "digits",
+    # seaborn datasets
+    "Penguins":    "penguins",
+    "Tips":        "tips",
+    "Titanic":     "titanic",
+    "Diamonds":    "diamonds",
+    "MPG":         "mpg",
+    "Exercise":    "exercise",
+    "Attention":   "attention",
+    "Planets":     "planets",
+    "Taxis":       "taxis",
+    "Car Crashes": "car_crashes",
+    "Geyser":      "geyser",
+    "Anscombe":    "anscombe",
+}
+
+# seaborn datasets loaded via URL to avoid caching issues on Streamlit Cloud
+seaborn_url_base = "https://raw.githubusercontent.com/mwaskom/seaborn-data/master/"
+seaborn_datasets = {
+    "penguins", "tips", "titanic", "diamonds", "mpg",
+    "exercise", "attention", "planets", "taxis",
+    "car_crashes", "geyser", "anscombe",
 }
 
 load_method = st.radio("Data source", ["Built-in dataset", "Upload CSV", "Load from URL"], horizontal=True)
@@ -70,12 +91,19 @@ else:  # Built-in dataset
     elif key == "digits":
         ds = load_digits(as_frame=True)
         df = pd.concat([ds.data, ds.target.rename("target")], axis=1)
-    elif key == "penguins":
-        url = "https://raw.githubusercontent.com/mwaskom/seaborn-data/master/penguins.csv"
-        df = pd.read_csv(url).dropna()
-        df = df.rename(columns={"species": "target"})
-        df["island"] = df["island"].astype("category").cat.codes
-        df["sex"] = df["sex"].astype("category").cat.codes
+    elif key in seaborn_datasets:
+        try:
+            url = f"{seaborn_url_base}{key}.csv"
+            df = pd.read_csv(url)
+            df = df.dropna()
+            st.info(
+                f"**{dataset_from_sklearn}** loaded — "
+                f"{df.shape[0]} rows, {df.shape[1]} columns. "
+                f"Select your target column below."
+            )
+        except Exception as e:
+            st.error(f"Failed to load {dataset_from_sklearn}: {e}")
+            st.stop()
 
 st.write("### Dataset preview")
 st.dataframe(df.head())
@@ -101,6 +129,59 @@ if target_column in feature_columns:
 if len(feature_columns) == 0:
     st.warning("At least one feature column is required.")
     st.stop()
+
+# ---------------------------------------------------------------------------
+# Scatter plots: each feature vs target
+# ---------------------------------------------------------------------------
+st.write("### Feature vs Target Scatter Plots")
+
+# Encode target for coloring — keep original labels for legend
+y_raw    = df[target_column]
+y_labels_scatter = y_raw.astype(str)
+unique_targets   = sorted(y_labels_scatter.unique())
+color_palette    = plt.cm.tab10.colors
+
+# Layout: up to 4 plots per row
+n_cols   = 4
+n_feats  = len(feature_columns)
+n_rows   = max(1, -(-n_feats // n_cols))  # ceiling division
+
+fig_scatter, axes = plt.subplots(
+    n_rows, n_cols,
+    figsize=(5 * n_cols, 4 * n_rows),
+    squeeze=False
+)
+
+for idx, feat in enumerate(feature_columns):
+    row, col = divmod(idx, n_cols)
+    ax = axes[row][col]
+
+    for t_idx, target_val in enumerate(unique_targets):
+        mask = y_labels_scatter == target_val
+        x_vals = df[feat][mask]
+        y_vals = y_raw[mask] if pd.api.types.is_numeric_dtype(y_raw) else np.full(mask.sum(), t_idx)
+        ax.scatter(
+            x_vals,
+            y_vals,
+            label=str(target_val),
+            alpha=0.6,
+            color=color_palette[t_idx % len(color_palette)],
+            s=20,
+        )
+
+    ax.set_xlabel(feat, fontsize=9)
+    ax.set_ylabel(target_column, fontsize=9)
+    ax.set_title(f"{feat} vs {target_column}", fontsize=10)
+    ax.legend(fontsize=7, title=target_column, title_fontsize=7)
+
+# Hide unused subplots
+for idx in range(n_feats, n_rows * n_cols):
+    row, col = divmod(idx, n_cols)
+    axes[row][col].set_visible(False)
+
+plt.tight_layout()
+st.pyplot(fig_scatter)
+plt.close()
 
 # ---------------------------------------------------------------------------
 # Two-column layout: Model Parameters left, Pairplot right
@@ -195,8 +276,53 @@ for depth in range(1, max_depth_input + 1):
 
 results_df = pd.DataFrame(results, columns=["depth", "accuracy"])
 
+# ---------------------------------------------------------------------------
+# Information gain at root split for each feature
+# ---------------------------------------------------------------------------
+def calc_entropy(series):
+    probs = series.value_counts(normalize=True)
+    probs_nz = probs[probs > 0]
+    return -np.sum(probs_nz * np.log2(probs_nz))
+
+parent_entropy = calc_entropy(y_train)
+
+def calc_gini(series):
+    probs = series.value_counts(normalize=True)
+    return 1 - np.sum(probs ** 2)
+
+parent_entropy = calc_entropy(y_train)
+parent_gini    = calc_gini(y_train)
+
+ig_results = []
+for feat in feature_columns:
+    groups = y_train.groupby(X_train[feat])
+
+    weighted_entropy = sum(
+        (len(g) / len(y_train)) * calc_entropy(g)
+        for _, g in groups
+    )
+    weighted_gini = sum(
+        (len(g) / len(y_train)) * calc_gini(g)
+        for _, g in groups
+    )
+
+    ig_results.append({
+        "Feature":          feat,
+        "Info Gain":        round(parent_entropy - weighted_entropy, 4),
+        "Weighted Entropy": round(weighted_entropy, 4),
+        "Gini Reduction":   round(parent_gini - weighted_gini, 4),
+        "Weighted Gini":    round(weighted_gini, 4),
+    })
+
+ig_df = pd.DataFrame(ig_results).sort_values("Info Gain", ascending=False)
+
 with col_params:
-    # Accuracy chart — below training/test sample info
+    # Information gain table — above accuracy chart
+    st.write("### Information Gain at Root Split")
+    st.caption(f"Parent entropy: {parent_entropy:.4f}   |   Parent gini: {parent_gini:.4f}")
+    st.dataframe(ig_df, hide_index=True)
+
+    # Accuracy chart — below information gain
     st.write("Accuracy at different Depth. Vary test size using slider to see how it changes.")
     if results_df.empty:
         st.warning("No depth results available. Adjust max depth or check data.")
