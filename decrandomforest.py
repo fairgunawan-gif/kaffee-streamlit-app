@@ -18,6 +18,8 @@ st.write("Upload labeled training data, evaluate performance depth-by-depth, fea
 # Data loading: built-in, file upload, or URL
 # ---------------------------------------------------------------------------
 sklearn_options = {
+    # custom embedded dataset — default
+    "Radfahren":               "radfahren",
     # sklearn datasets
     "Iris (sklearn)":          "iris",
     "Wine (sklearn)":          "wine",
@@ -79,7 +81,15 @@ else:  # Built-in dataset
     dataset_from_sklearn = st.selectbox("Pick a built-in dataset", list(sklearn_options.keys()), index=0)
     key = sklearn_options[dataset_from_sklearn]
 
-    if key == "iris":
+    if key == "radfahren":
+        # Embedded directly — no file needed in repo
+        df = pd.DataFrame({
+            "Sonnig":      ["J","N","N","N","J","N","J","J","J"],
+            "Schnee":      ["N","N","N","N","N","N","N","J","J"],
+            "Auto_kaputt": ["N","N","J","N","J","J","N","N","J"],
+            "Radfahren":   ["J","N","J","N","J","J","N","N","N"],
+        })
+    elif key == "iris":
         ds = load_iris(as_frame=True)
         df = pd.concat([ds.data, ds.target.rename("target")], axis=1)
     elif key == "wine":
@@ -105,8 +115,8 @@ else:  # Built-in dataset
             st.error(f"Failed to load {dataset_from_sklearn}: {e}")
             st.stop()
 
-st.write("### Dataset preview")
-st.dataframe(df.head())
+st.write("### Dataset preview (top 10 rows)")
+st.dataframe(df.head(10))
 
 all_columns = df.columns.tolist()
 if len(all_columns) < 2:
