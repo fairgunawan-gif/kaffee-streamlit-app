@@ -145,16 +145,25 @@ if len(feature_columns) == 0:
 # ---------------------------------------------------------------------------
 st.write("### Feature vs Target Scatter Plots")
 
-# Encode target for coloring — keep original labels for legend
-y_raw    = df[target_column]
+# Encode features and target just for scatter plotting
+X_scatter = df[feature_columns].copy()
+for col in X_scatter.columns:
+    if X_scatter[col].dtype == object or X_scatter[col].dtype.name == "category":
+        X_scatter[col] = X_scatter[col].astype("category").cat.codes
+
+y_raw            = df[target_column]
 y_labels_scatter = y_raw.astype(str)
 unique_targets   = sorted(y_labels_scatter.unique())
-color_palette    = plt.cm.tab10.colors
+# Encode target numerically for y-axis when categorical
+y_scatter = y_raw.copy()
+if y_scatter.dtype == object or y_scatter.dtype.name == "category":
+    y_scatter = y_scatter.astype("category").cat.codes
+color_palette = plt.cm.tab10.colors
 
 # Layout: up to 4 plots per row
-n_cols   = 4
-n_feats  = len(feature_columns)
-n_rows   = max(1, -(-n_feats // n_cols))  # ceiling division
+n_cols  = 4
+n_feats = len(feature_columns)
+n_rows  = max(1, -(-n_feats // n_cols))  # ceiling division
 
 fig_scatter, axes = plt.subplots(
     n_rows, n_cols,
@@ -167,9 +176,9 @@ for idx, feat in enumerate(feature_columns):
     ax = axes[row][col]
 
     for t_idx, target_val in enumerate(unique_targets):
-        mask = y_labels_scatter == target_val
-        x_vals = df[feat][mask]
-        y_vals = y_raw[mask] if pd.api.types.is_numeric_dtype(y_raw) else np.full(mask.sum(), t_idx)
+        mask   = y_labels_scatter == target_val
+        x_vals = X_scatter[feat][mask]   # encoded numeric values
+        y_vals = y_scatter[mask]          # encoded numeric values
         ax.scatter(
             x_vals,
             y_vals,
