@@ -228,18 +228,17 @@ y = df[target_column].copy()
 y_labels = y.astype(str)
 
 # Encode target if not numeric
-if y.dtype == object or y.dtype.name == "category":
-    y = y.astype("category").cat.codes
+if not pd.api.types.is_numeric_dtype(y):
+    y = y.astype(str).astype("category").cat.codes
 
-# Encode categorical feature columns
+# Encode ALL non-numeric feature columns
 for col in X.columns:
-    if X[col].dtype == object or X[col].dtype.name == "category":
-        X[col] = X[col].astype("category").cat.codes
+    if not pd.api.types.is_numeric_dtype(X[col]):
+        X[col] = X[col].astype(str).astype("category").cat.codes
 
-# Force all columns to float64 — guarantees sklearn compatibility
-# across all pandas/numpy versions on Streamlit Cloud
-X = X.astype(float)
-y = y.astype(int)
+# Convert to plain numpy-compatible types
+X = X.apply(pd.to_numeric, errors="coerce").fillna(0).astype(float)
+y = pd.to_numeric(y, errors="coerce").fillna(0).astype(int)
 
 # ---------------------------------------------------------------------------
 # Train / test split
