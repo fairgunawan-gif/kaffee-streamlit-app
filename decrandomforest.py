@@ -460,14 +460,14 @@ with col_predict:
 
     for col_name in feature_columns:
         original_col = df[col_name]
-        if original_col.dtype == object or original_col.dtype.name == "category":
-            unique_vals  = sorted(df[col_name].dropna().unique().tolist())
+        if not pd.api.types.is_numeric_dtype(original_col):
+            unique_vals  = sorted(original_col.astype(str).dropna().unique().tolist())
             selected_val = st.selectbox(f"{col_name}", unique_vals, key=f"input_{col_name}")
-            input_values[col_name] = unique_vals.index(selected_val)
+            input_values[col_name] = float(unique_vals.index(selected_val))
         else:
-            col_min  = float(original_col.min())
-            col_max  = float(original_col.max())
-            col_mean = float(original_col.mean())
+            col_min  = float(pd.to_numeric(original_col, errors="coerce").min())
+            col_max  = float(pd.to_numeric(original_col, errors="coerce").max())
+            col_mean = float(pd.to_numeric(original_col, errors="coerce").mean())
             input_values[col_name] = st.number_input(
                 f"{col_name}",
                 min_value=col_min,
