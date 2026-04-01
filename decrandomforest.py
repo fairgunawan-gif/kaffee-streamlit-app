@@ -149,7 +149,7 @@ st.write("### Feature vs Target Scatter Plots")
 X_scatter = df[feature_columns].copy()
 for col in X_scatter.columns:
     if X_scatter[col].dtype == object or X_scatter[col].dtype.name == "category":
-        X_scatter[col] = X_scatter[col].astype("category").cat.codes
+        X_scatter[col] = X_scatter[col].astype("category").cat.codes.astype(int)
 
 y_raw            = df[target_column]
 y_labels_scatter = y_raw.astype(str)
@@ -157,7 +157,7 @@ unique_targets   = sorted(y_labels_scatter.unique())
 # Encode target numerically for y-axis when categorical
 y_scatter = y_raw.copy()
 if y_scatter.dtype == object or y_scatter.dtype.name == "category":
-    y_scatter = y_scatter.astype("category").cat.codes
+    y_scatter = y_scatter.astype("category").cat.codes.astype(int)
 color_palette = plt.cm.tab10.colors
 
 # Layout: up to 4 plots per row
@@ -235,6 +235,11 @@ if y.dtype == object or y.dtype.name == "category":
 for col in X.columns:
     if X[col].dtype == object or X[col].dtype.name == "category":
         X[col] = X[col].astype("category").cat.codes
+
+# Force all columns to float64 — guarantees sklearn compatibility
+# across all pandas/numpy versions on Streamlit Cloud
+X = X.astype(float)
+y = y.astype(int)
 
 # ---------------------------------------------------------------------------
 # Train / test split
