@@ -55,8 +55,17 @@ df = None
 if load_method == "Upload CSV":
     uploaded = st.file_uploader("Upload a CSV file with features and target", type=["csv"])
     if uploaded is not None:
-        df = pd.read_csv(uploaded)
-        st.success("CSV loaded successfully")
+        try:
+            try:
+                df = pd.read_csv(uploaded, sep=",", on_bad_lines="skip")
+            except Exception:
+                uploaded.seek(0)
+                df = pd.read_csv(uploaded, sep=None, engine="python", on_bad_lines="skip")
+            df = df.dropna(axis=1, how="all").dropna(how="all")
+            st.success(f"CSV loaded successfully — {df.shape[0]} rows, {df.shape[1]} columns")
+        except Exception as e:
+            st.error(f"Failed to read CSV: {e}")
+            st.stop()
     else:
         st.info("Waiting for CSV upload...")
         st.stop()
@@ -68,10 +77,26 @@ elif load_method == "Load from URL":
     )
     if url_input:
         try:
-            df = pd.read_csv(url_input)
+            # Try comma separator first
+            try:
+                df = pd.read_csv(url_input, sep=",", on_bad_lines="skip")
+            except Exception:
+                # Fallback: auto-detect separator
+                df = pd.read_csv(url_input, sep=None, engine="python", on_bad_lines="skip")
+
+            # Drop columns that are entirely NaN (artifact of extra commas)
+            df = df.dropna(axis=1, how="all")
+            # Drop rows that are entirely NaN
+            df = df.dropna(how="all")
+
             st.success(f"Loaded {df.shape[0]} rows and {df.shape[1]} columns from URL")
+            if df.shape[0] == 0:
+                st.error("File loaded but contains no valid rows. Check the CSV format.")
+                st.stop()
         except Exception as e:
             st.error(f"Failed to load URL: {e}")
+            st.info("Tips: Make sure the URL points to a raw CSV file, not an HTML page. "
+                    "For GitHub, use the 'Raw' button to get the direct file URL.")
             st.stop()
     else:
         st.info("Paste a public CSV URL above to load data.")
