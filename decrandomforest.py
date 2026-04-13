@@ -245,11 +245,20 @@ with col_params:
         ["Train/Test Split", "Cross Validation", "Use All Data"],
         horizontal=True
     )
+    test_size_options = list(range(0, 55, 5))  # [0, 5, 10, ..., 50]
     if eval_mode == "Train/Test Split":
-        test_size = st.slider("Test set size (%)", min_value=1, max_value=50, value=20)
+        test_size = st.select_slider(
+            "Test set size (%)",
+            options=test_size_options,
+            value=20
+        )
     elif eval_mode == "Cross Validation":
-        test_size = st.slider("Test set size (%)", min_value=1, max_value=50, value=20)
-        n_folds   = st.slider("Number of CV folds (on training set)", min_value=2, max_value=20, value=5)
+        test_size = st.select_slider(
+            "Test set size (%)",
+            options=test_size_options,
+            value=20
+        )
+        n_folds = st.slider("Number of CV folds (on training set)", min_value=2, max_value=20, value=5)
 
     use_all_data = (eval_mode == "Use All Data")
 
@@ -287,22 +296,39 @@ if eval_mode == "Use All Data":
         st.write(f"Training samples: {X_train.shape[0]} (all data — training accuracy only)")
 
 elif eval_mode == "Cross Validation":
-    # Split off test set first, then CV runs only on the training portion
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=test_size / 100.0, random_state=42, stratify=y
-    )
-    with col_params:
-        st.write(
-            f"Test set: {X_test.shape[0]} samples ({test_size}%)  |  "
-            f"CV on training set: {X_train.shape[0]} samples — {n_folds} folds"
+    if test_size == 0:
+        # No test set — CV runs on all data
+        X_train = X
+        X_test  = X
+        y_train = y
+        y_test  = y
+        with col_params:
+            st.write(f"CV on all {X_train.shape[0]} samples — {n_folds} folds (no held-out test set)")
+    else:
+        # Split off test set first, then CV runs only on the training portion
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=test_size / 100.0, random_state=42, stratify=y
         )
+        with col_params:
+            st.write(
+                f"Test set: {X_test.shape[0]} samples ({test_size}%)  |  "
+                f"CV on training set: {X_train.shape[0]} samples — {n_folds} folds"
+            )
 
 else:  # Train/Test Split
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=test_size / 100.0, random_state=42, stratify=y
-    )
-    with col_params:
-        st.write(f"Training samples: {X_train.shape[0]}, Test samples: {X_test.shape[0]}")
+    if test_size == 0:
+        X_train = X
+        X_test  = X
+        y_train = y
+        y_test  = y
+        with col_params:
+            st.write(f"Training samples: {X_train.shape[0]} (test size 0% — training accuracy only)")
+    else:
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=test_size / 100.0, random_state=42, stratify=y
+        )
+        with col_params:
+            st.write(f"Training samples: {X_train.shape[0]}, Test samples: {X_test.shape[0]}")
 
 # --- RIGHT: Pairplot ---
 with col_pairplot:
