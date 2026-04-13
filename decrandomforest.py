@@ -1,7 +1,7 @@
 import numpy as np
 import streamlit as st
 import pandas as pd
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.tree import DecisionTreeClassifier, plot_tree
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, classification_report
@@ -239,9 +239,19 @@ with col_params:
     max_depth_input = st.slider("Max tree depth to evaluate", min_value=1, max_value=10, value=3)
     if algorithm == "Random Forest":
         n_estimators = st.slider("Number of trees", min_value=10, max_value=500, value=100, step=10)
-    use_all_data = st.checkbox("Use all data for tree building only (no train/test split)", value=False)
-    if not use_all_data:
+
+    eval_mode = st.radio(
+        "Evaluation mode",
+        ["Train/Test Split", "Cross Validation", "Use All Data"],
+        horizontal=True
+    )
+    if eval_mode == "Train/Test Split":
         test_size = st.slider("Test set size (%)", min_value=1, max_value=50, value=20)
+    elif eval_mode == "Cross Validation":
+        n_folds = st.slider("Number of folds", min_value=2, max_value=20, value=5)
+
+    # keep backward compat for use_all_data flag used later
+    use_all_data = (eval_mode == "Use All Data")
 
 # ---------------------------------------------------------------------------
 # Encode features and target (must happen before pairplot and training)
@@ -266,16 +276,26 @@ X = X.apply(pd.to_numeric, errors="coerce").fillna(0).astype(float)
 y = pd.to_numeric(y, errors="coerce").fillna(0).astype(int)
 
 # ---------------------------------------------------------------------------
-# Train / test split
+# Train / test split — or cross validation — or all data
 # ---------------------------------------------------------------------------
-if use_all_data:
+if eval_mode == "Use All Data":
     X_train = X
     X_test  = X
     y_train = y
     y_test  = y
     with col_params:
         st.write(f"Training samples: {X_train.shape[0]} (all data — training accuracy only)")
-else:
+
+elif eval_mode == "Cross Validation":
+    # Use all data for CV — train/test split done internally per fold
+    X_train = X
+    X_test  = X
+    y_train = y
+    y_test  = y
+    with col_params:
+        st.write(f"Cross validation: {n_folds} folds on {X.shape[0]} samples")
+
+else:  # Train/Test Split
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=test_size / 100.0, random_state=42, stratify=y
     )
@@ -317,9 +337,13 @@ def make_clf(depth):
 results = []
 for depth in range(1, max_depth_input + 1):
     clf = make_clf(depth)
-    clf.fit(X_train, y_train)
-    y_pred = clf.predict(X_test)
-    acc = accuracy_score(y_test, y_pred)
+    if eval_mode == "Cross Validation":
+        cv_scores = cross_val_score(clf, X, y, cv=n_folds, scoring="accuracy")
+        acc = cv_scores.mean()
+    else:
+        clf.fit(X_train, y_train)
+        y_pred = clf.predict(X_test)
+        acc = accuracy_score(y_test, y_pred)
     results.append((depth, acc))
 
 results_df = pd.DataFrame(results, columns=["depth", "accuracy"])
@@ -371,7 +395,10 @@ with col_params:
     st.dataframe(ig_df, hide_index=True)
 
     # Accuracy chart — below information gain
-    st.write("Accuracy at different Depth. Vary test size using slider to see how it changes.")
+    if eval_mode == "Cross Validation":
+        st.write(f"Accuracy per depth — {n_folds}-fold Cross Validation (mean accuracy)")
+    else:
+        st.write("Accuracy at different Depth. Vary test size using slider to see how it changes.")
     if results_df.empty:
         st.warning("No depth results available. Adjust max depth or check data.")
     else:
@@ -383,6 +410,17 @@ with col_params:
     best_acc   = results_df["accuracy"].max()
     st.write(f"Algorithm: {algorithm}")
     st.write(f"Best depth: {best_depth} with accuracy {best_acc:.4f}")
+
+    # Show per-fold scores for cross validation
+    if eval_mode == "Cross Validation":
+        best_clf = make_clf(best_depth)
+        cv_scores = cross_val_score(best_clf, X, y, cv=n_folds, scoring="accuracy")
+        st.write(f"CV mean: {cv_scores.mean():.4f} ± {cv_scores.std():.4f}")
+        fold_df = pd.DataFrame({
+            "Fold":     [f"Fold {i+1}" for i in range(n_folds)],
+            "Accuracy": [f"{s:.4f}" for s in cv_scores]
+        })
+        st.dataframe(fold_df, hide_index=True)
 
 # ---------------------------------------------------------------------------
 # Tree inspection at selected depth
@@ -399,7 +437,12 @@ y_pred = clf.predict(X_test)
 acc = accuracy_score(y_test, y_pred)
 
 st.write(f"### {algorithm} at depth {selected_depth}")
-st.write(f"Accuracy at this depth: {acc:.4f}")
+if eval_mode == "Cross Validation":
+    cv_scores_sel = cross_val_score(make_clf(selected_depth), X, y, cv=n_folds, scoring="accuracy")
+    st.write(f"CV accuracy: {cv_scores_sel.mean():.4f} ± {cv_scores_sel.std():.4f}  "
+             f"(single-fold shown in tree below: {acc:.4f})")
+else:
+    st.write(f"Accuracy at this depth: {acc:.4f}")
 
 # ---------------------------------------------------------------------------
 # Tree visualization — Decision Tree only
