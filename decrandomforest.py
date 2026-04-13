@@ -248,9 +248,9 @@ with col_params:
     if eval_mode == "Train/Test Split":
         test_size = st.slider("Test set size (%)", min_value=1, max_value=50, value=20)
     elif eval_mode == "Cross Validation":
-        n_folds = st.slider("Number of folds", min_value=2, max_value=20, value=5)
+        test_size = st.slider("Test set size (%)", min_value=1, max_value=50, value=20)
+        n_folds   = st.slider("Number of CV folds (on training set)", min_value=2, max_value=20, value=5)
 
-    # keep backward compat for use_all_data flag used later
     use_all_data = (eval_mode == "Use All Data")
 
 # ---------------------------------------------------------------------------
@@ -287,13 +287,15 @@ if eval_mode == "Use All Data":
         st.write(f"Training samples: {X_train.shape[0]} (all data — training accuracy only)")
 
 elif eval_mode == "Cross Validation":
-    # Use all data for CV — train/test split done internally per fold
-    X_train = X
-    X_test  = X
-    y_train = y
-    y_test  = y
+    # Split off test set first, then CV runs only on the training portion
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=test_size / 100.0, random_state=42, stratify=y
+    )
     with col_params:
-        st.write(f"Cross validation: {n_folds} folds on {X.shape[0]} samples")
+        st.write(
+            f"Test set: {X_test.shape[0]} samples ({test_size}%)  |  "
+            f"CV on training set: {X_train.shape[0]} samples — {n_folds} folds"
+        )
 
 else:  # Train/Test Split
     X_train, X_test, y_train, y_test = train_test_split(
@@ -338,7 +340,8 @@ results = []
 for depth in range(1, max_depth_input + 1):
     clf = make_clf(depth)
     if eval_mode == "Cross Validation":
-        cv_scores = cross_val_score(clf, X, y, cv=n_folds, scoring="accuracy")
+        # CV runs on training set only — test set is held out
+        cv_scores = cross_val_score(clf, X_train, y_train, cv=n_folds, scoring="accuracy")
         acc = cv_scores.mean()
     else:
         clf.fit(X_train, y_train)
@@ -414,13 +417,17 @@ with col_params:
     # Show per-fold scores for cross validation
     if eval_mode == "Cross Validation":
         best_clf = make_clf(best_depth)
-        cv_scores = cross_val_score(best_clf, X, y, cv=n_folds, scoring="accuracy")
-        st.write(f"CV mean: {cv_scores.mean():.4f} ± {cv_scores.std():.4f}")
+        cv_scores = cross_val_score(best_clf, X_train, y_train, cv=n_folds, scoring="accuracy")
+        st.write(f"CV mean (train set): {cv_scores.mean():.4f} ± {cv_scores.std():.4f}")
         fold_df = pd.DataFrame({
             "Fold":     [f"Fold {i+1}" for i in range(n_folds)],
             "Accuracy": [f"{s:.4f}" for s in cv_scores]
         })
         st.dataframe(fold_df, hide_index=True)
+        # Final evaluation on held-out test set
+        best_clf.fit(X_train, y_train)
+        test_acc = accuracy_score(y_test, best_clf.predict(X_test))
+        st.write(f"Final test set accuracy: **{test_acc:.4f}**")
 
 # ---------------------------------------------------------------------------
 # Tree inspection at selected depth
@@ -438,9 +445,9 @@ acc = accuracy_score(y_test, y_pred)
 
 st.write(f"### {algorithm} at depth {selected_depth}")
 if eval_mode == "Cross Validation":
-    cv_scores_sel = cross_val_score(make_clf(selected_depth), X, y, cv=n_folds, scoring="accuracy")
-    st.write(f"CV accuracy: {cv_scores_sel.mean():.4f} ± {cv_scores_sel.std():.4f}  "
-             f"(single-fold shown in tree below: {acc:.4f})")
+    cv_scores_sel = cross_val_score(make_clf(selected_depth), X_train, y_train, cv=n_folds, scoring="accuracy")
+    st.write(f"CV accuracy (train set): {cv_scores_sel.mean():.4f} ± {cv_scores_sel.std():.4f}  "
+             f"| Final test set accuracy: {acc:.4f}")
 else:
     st.write(f"Accuracy at this depth: {acc:.4f}")
 
