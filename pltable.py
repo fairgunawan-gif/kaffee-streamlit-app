@@ -3,6 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import requests
+from io import StringIO
 
 BBC_URL = "https://www.bbc.com/sport/football/tables"
 
@@ -21,7 +22,7 @@ def fetch_table() -> pd.DataFrame:
     resp = requests.get(BBC_URL, headers=headers, timeout=15)
     resp.raise_for_status()
 
-    tables = pd.read_html(resp.text)
+    tables = pd.read_html(StringIO(resp.text))
     if not tables:
         raise ValueError("No tables found on the page")
     df = tables[0]
