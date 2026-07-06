@@ -12,7 +12,7 @@ import seaborn as sns
 st.set_page_config(page_title="Decision Tree & Random Forest", page_icon="🌳", layout="wide")
 
 st.title("Interactive Decision Tree & Random Forest Classification")
-st.write("Upload labeled training data, evaluate performance depth-by-depth, feature-by-feature and test set size.")
+st.write("Upload labeled training data, evaluate performance depth-by-depth, feature-by-feature and test set size. Predict a class.")
 
 # ---------------------------------------------------------------------------
 # Data loading: built-in, file upload, or URL
